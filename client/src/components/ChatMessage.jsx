@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 /**
  * A single chat bubble with distinct visual styling for user vs AI.
  *
@@ -8,16 +10,29 @@
  * AI messages:
  *   - Left-aligned, white background with border + shadow
  *   - AI avatar (sparkle icon) on the left, sharp bottom-left corner
+ *   - Copy button below the bubble (copies full response to clipboard)
  *
  * The streaming view reuses this with isStreaming=true for the accumulating
  * text with a blinking cursor.
  */
 export default function ChatMessage({ role, content, isStreaming = false }) {
   const isUser = role === "user";
+  const [copied, setCopied] = useState(false);
+
   const time = new Date().toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
   });
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
 
   return (
     <div
@@ -36,7 +51,7 @@ export default function ChatMessage({ role, content, isStreaming = false }) {
         </div>
       )}
 
-      <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
+      <div className={`flex flex-col flex-1 min-w-0 ${isUser ? "items-end" : "items-start"}`}>
         <div className={`flex items-center gap-2 mb-1 ${isUser ? "flex-row-reverse" : ""}`}>
           <span className={`text-xs font-semibold ${isUser ? "text-blue-600" : "text-indigo-500"}`}>
             {isUser ? "You" : "Gemini AI"}
@@ -46,7 +61,7 @@ export default function ChatMessage({ role, content, isStreaming = false }) {
 
         {/* Message bubble */}
         <div
-          className={`max-w-[70%] px-4 py-3 shadow-sm ${
+          className={`w-fit max-w-[75%] px-4 py-3 shadow-sm ${
             isUser
               ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl rounded-br-md"
               : "bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-bl-md"
@@ -59,6 +74,34 @@ export default function ChatMessage({ role, content, isStreaming = false }) {
             )}
           </p>
         </div>
+
+        {/* Copy button — only for AI messages, hidden while streaming */}
+        {!isUser && !isStreaming && (
+          <button
+            onClick={handleCopy}
+            className={`flex items-center gap-1.5 mt-1.5 ml-1 text-xs transition-colors ${
+              copied ? "text-green-500" : "text-slate-400 hover:text-slate-600"
+            }`}
+            title="Copy response"
+          >
+            {copied ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                Copied!
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+                Copy
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* User avatar — right side */}
